@@ -1,9 +1,9 @@
-import { Product, QuotationItem } from '../types';
+import { Product, GlobalParams } from '../types';
 
 interface DataExportImportProps {
   products: Product[];
-  savedParams: QuotationItem;
-  onImport: (products: Product[], params: QuotationItem) => void;
+  savedParams: GlobalParams;
+  onImport: (products: Product[], params: GlobalParams) => void;
   onClearAll: () => void;
 }
 

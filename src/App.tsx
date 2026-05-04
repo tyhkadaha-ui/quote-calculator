@@ -1,68 +1,88 @@
-import { Product, QuotationItem } from './types';
-import { ProductManager } from './components/ProductManager';
-import { QuotationCalculator } from './components/QuotationCalculator';
-import { DataExportImport } from './components/DataExportImport';
+import { useMemo } from 'react';
+import { Product, GlobalParams } from './types';
+import { GlobalParamsPanel } from './components/GlobalParamsPanel';
+import { ProductList } from './components/ProductList';
+import { QuoteMatrix } from './components/QuoteMatrix';
+import { calculateQuoteMatrix } from './utils/calculations';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { generateId } from './utils/calculations';
-
-const defaultParams: QuotationItem = {
-  productId: '',
-  quantity: 5000,
-  factoryUnitPrice: 0,
-  billingTaxRate: 0,
-  freightToNingbo: 0,
-  moldFeeTotal: 0,
-  packagingFee: 0,
-  printingFee: 0,
-  localPortFee: 0,
-  freightToClient: 0,
-  freightMarkup: 1.2,
-  insuranceFee: 0,
-  profitRate: 0.2,
-  exchangeRate: 6.75,
-};
+import { DataExportImport } from './components/DataExportImport';
 
 const defaultProducts: Product[] = [
-  { id: generateId(), name: '反光背心', description: '', taxRefundRate: 0.13 },
-  { id: generateId(), name: '反光啪啪圈', description: '', taxRefundRate: 0.13 },
-  { id: generateId(), name: '反光玩具', description: '', taxRefundRate: 0.09 },
-  { id: generateId(), name: '反光钥匙链', description: '', taxRefundRate: 0.13 },
+  {
+    id: 'default-1',
+    name: '反光背心',
+    quantity: 5000,
+    factoryUnitPrice: 8,
+    billingTaxRate: 0.13,
+    taxRefundRate: 0.13,
+    freightToNingbo: 0,
+  },
 ];
 
-function App() {
-  const [products, setProducts] = useLocalStorage<Product[]>('quote-products', defaultProducts);
-  const [savedParams, setSavedParams] = useLocalStorage<QuotationItem>('quote-params', defaultParams);
+const defaultParams: GlobalParams = {
+  exchangeRate: 6.75,
+  totalPortFees: 500,
+  totalMainFreight: 5000,
+  profitRate: 0.2,
+  serviceFee: 0,
+};
 
-  function handleImport(newProducts: Product[], newParams: QuotationItem) {
+function App() {
+  const [products, setProducts] = useLocalStorage<Product[]>('quote-products-v2', defaultProducts);
+  const [params, setParams] = useLocalStorage<GlobalParams>('quote-params-v2', defaultParams);
+
+  const quoteMatrix = useMemo(() => {
+    return calculateQuoteMatrix(products, params);
+  }, [products, params]);
+
+  function handleImport(newProducts: Product[], newParams: GlobalParams) {
     setProducts(newProducts);
-    setSavedParams(newParams);
+    setParams(newParams);
   }
 
   function handleClearAll() {
     setProducts([]);
-    setSavedParams(defaultParams);
+    setParams(defaultParams);
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold text-center text-gray-800">外贸报价计算器</h1>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <h1 className="text-2xl font-bold text-gray-800">外贸报价计算器</h1>
+        </div>
+      </header>
 
-        <ProductManager products={products} onProductsChange={setProducts} />
+      {/* Main Content: 3 Column Layout */}
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column: Global Params (2 cols) */}
+          <div className="lg:col-span-3">
+            <GlobalParamsPanel params={params} onChange={setParams} />
+          </div>
 
-        <DataExportImport
-          products={products}
-          savedParams={savedParams}
-          onImport={handleImport}
-          onClearAll={handleClearAll}
-        />
+          {/* Middle Column: Product List (5 cols) */}
+          <div className="lg:col-span-5">
+            <ProductList products={products} onChange={setProducts} />
+          </div>
 
-        <QuotationCalculator
-          products={products}
-          savedParams={savedParams}
-          onParamsChange={setSavedParams}
-        />
-      </div>
+          {/* Right Column: Quote Matrix (4 cols) */}
+          <div className="lg:col-span-4">
+            <QuoteMatrix data={quoteMatrix} />
+          </div>
+        </div>
+
+        {/* Data Management */}
+        <div className="mt-6">
+          <DataExportImport
+            products={products}
+            savedParams={params as any}
+            onImport={handleImport as any}
+            onClearAll={handleClearAll}
+          />
+        </div>
+      </main>
     </div>
   );
 }
